@@ -1228,9 +1228,10 @@ public class SpringApplication {
 	/**
 	 * Static helper that can be used to run a {@link SpringApplication} from the
 	 * specified source using default settings.
-	 * @param primarySource the primary source to load
-	 * @param args the application arguments (usually passed from a Java main method)
+	 * @param primarySource the primary source to load 入口类信息
+	 * @param args the application arguments (usually passed from a Java main method) 参数
 	 * @return the running {@link ApplicationContext}
+	 *
 	 */
 	public static ConfigurableApplicationContext run(Class<?> primarySource, String... args) {
 		return run(new Class<?>[] { primarySource }, args);
