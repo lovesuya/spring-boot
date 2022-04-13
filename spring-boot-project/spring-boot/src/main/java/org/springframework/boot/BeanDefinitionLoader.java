@@ -79,12 +79,16 @@ class BeanDefinitionLoader {
 		Assert.notNull(registry, "Registry must not be null");
 		Assert.notEmpty(sources, "Sources must not be empty");
 		this.sources = sources;
+		// 注解方式的读取器
 		this.annotatedReader = new AnnotatedBeanDefinitionReader(registry);
+		//xml方式的读取器
 		this.xmlReader = new XmlBeanDefinitionReader(registry);
 		if (isGroovyPresent()) {
 			this.groovyReader = new GroovyBeanDefinitionReader(registry);
 		}
+		//类路径下的扫描器
 		this.scanner = new ClassPathBeanDefinitionScanner(registry);
+		//扫描排除当前main方法的主类
 		this.scanner.addExcludeFilter(new ClassExcludeFilter(sources));
 	}
 

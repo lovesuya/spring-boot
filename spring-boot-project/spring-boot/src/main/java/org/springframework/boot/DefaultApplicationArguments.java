@@ -30,13 +30,15 @@ import org.springframework.util.Assert;
  *
  * @author Phillip Webb
  * @since 1.4.1
+ * ApplicationArguments 的唯一实现类
  */
 public class DefaultApplicationArguments implements ApplicationArguments {
-
+	//内部类，获取参数的主要操作都在此类中
 	private final Source source;
-
+	//应用程序原始未处理的参数
 	private final String[] args;
 
+	//构造函数，args不可以为null
 	public DefaultApplicationArguments(String... args) {
 		Assert.notNull(args, "Args must not be null");
 		this.source = new Source(args);

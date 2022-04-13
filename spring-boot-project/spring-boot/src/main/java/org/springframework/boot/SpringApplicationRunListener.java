@@ -32,12 +32,15 @@ import org.springframework.core.io.support.SpringFactoriesLoader;
  * @author Dave Syer
  * @author Andy Wilkinson
  * @since 1.0.0
+ * 监听SpringApplication的run方法。SpringApplicationRunListener 是 SpringFactoriesLoader加载的，并且应该声明
+ * 为构造器是接收 SpringApplication实例 和 String[]的参数。一个新的SpringApplicationRunListener实例将会每次运行创建
  */
 public interface SpringApplicationRunListener {
 
 	/**
 	 * Called immediately when the run method has first started. Can be used for very
 	 * early initialization.
+	 * 在运行方法第一次启动时立即调用。可以用于非常早期的初始化。
 	 */
 	default void starting() {
 	}
@@ -46,6 +49,7 @@ public interface SpringApplicationRunListener {
 	 * Called once the environment has been prepared, but before the
 	 * {@link ApplicationContext} has been created.
 	 * @param environment the environment
+	 * 在环境准备好，但在ApplicaitonContext创建之前
 	 */
 	default void environmentPrepared(ConfigurableEnvironment environment) {
 	}
@@ -54,6 +58,7 @@ public interface SpringApplicationRunListener {
 	 * Called once the {@link ApplicationContext} has been created and prepared, but
 	 * before sources have been loaded.
 	 * @param context the application context
+	 * 在ApplicationContext创建和准备好，但在资源加载前
 	 */
 	default void contextPrepared(ConfigurableApplicationContext context) {
 	}
@@ -62,6 +67,7 @@ public interface SpringApplicationRunListener {
 	 * Called once the application context has been loaded but before it has been
 	 * refreshed.
 	 * @param context the application context
+	 * application context 加载完，但在刷新之前
 	 */
 	default void contextLoaded(ConfigurableApplicationContext context) {
 	}
@@ -72,6 +78,7 @@ public interface SpringApplicationRunListener {
 	 * ApplicationRunners} have not been called.
 	 * @param context the application context.
 	 * @since 2.0.0
+	 * context 刷新完并且 application 已完成，但是在 CommandLineRunner 和 ApplicationRunner 被调用前
 	 */
 	default void started(ConfigurableApplicationContext context) {
 	}
@@ -82,6 +89,8 @@ public interface SpringApplicationRunListener {
 	 * {@link ApplicationRunner ApplicationRunners} have been called.
 	 * @param context the application context.
 	 * @since 2.0.0
+	 * 在run方法运行结束前调用，当application context 已经刷新 并且 CommandLineRunner 和 ApplicationRunner也已经
+	 * 被调用
 	 */
 	default void running(ConfigurableApplicationContext context) {
 	}
@@ -92,6 +101,7 @@ public interface SpringApplicationRunListener {
 	 * the context was created
 	 * @param exception the failure
 	 * @since 2.0.0
+	 * 在运行程序的时候发生错误的时候调用
 	 */
 	default void failed(ConfigurableApplicationContext context, Throwable exception) {
 	}

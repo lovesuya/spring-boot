@@ -52,6 +52,7 @@ import org.springframework.util.ClassUtils;
  * @see #scan(String...)
  * @see ServletWebServerApplicationContext
  * @see AnnotationConfigServletWebApplicationContext
+ * spring boot 的context实例
  */
 public class AnnotationConfigServletWebServerApplicationContext extends ServletWebServerApplicationContext
 		implements AnnotationConfigRegistry {

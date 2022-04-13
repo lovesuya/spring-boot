@@ -296,17 +296,29 @@ public class SpringApplication {
 	 * @return a running {@link ApplicationContext}
 	 */
 	public ConfigurableApplicationContext run(String... args) {
+		//用来记录任务的执行耗时
 		StopWatch stopWatch = new StopWatch();
+		//开启计时器
 		stopWatch.start();
+		//设置容器为空
 		ConfigurableApplicationContext context = null;
+		//设置了一个名为java.awt.headless的系统属性
 		configureHeadlessProperty();
+		//获取运行监听器
 		SpringApplicationRunListeners listeners = getRunListeners(args);
+		// 调用监听器的开始方法，内部会批量的调用监听器的starting方法，以发送事件等来间接调用ApplicationListener
 		listeners.starting();
 		try {
+			//通过此类获取args的各种数据
 			ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
+			// ConfigurableEnvironment是spring中非常重要的角色，可以通过它获得activeProfiles，
+			// 来判断我们所使用的环境是dev还是test或者prod等等。
+			// 还可以根据getProperty拿到配置中的信息并且提供类型转换功能，以及获取系统环境变量等信息
 			ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationArguments);
+			//得到系统属性spring.beaninfo.ignore，如果为空设置为true
 			configureIgnoreBeanInfo(environment);
 			Banner printedBanner = printBanner(environment);
+			//context =new AnnotationConfigServletWebServerApplicationContext()
 			context = createApplicationContext();
 			prepareContext(context, environment, listeners, applicationArguments, printedBanner);
 			refreshContext(context);
@@ -362,31 +374,43 @@ public class SpringApplication {
 
 	private void prepareContext(ConfigurableApplicationContext context, ConfigurableEnvironment environment,
 			SpringApplicationRunListeners listeners, ApplicationArguments applicationArguments, Banner printedBanner) {
+		// 设置Environment
 		context.setEnvironment(environment);
+		// 后置处理
 		postProcessApplicationContext(context);
+		// 调用ApplicationContextInitializer接口的实现
 		applyInitializers(context);
+		// 发布ApplicationContext准备事件，资源加载前
 		listeners.contextPrepared(context);
 		if (this.logStartupInfo) {
 			logStartupInfo(context.getParent() == null);
 			logStartupProfileInfo(context);
 		}
 		// Add boot specific singleton beans
+		//context初始化时 beanFactory= DefaultListableBeanFactory
 		ConfigurableListableBeanFactory beanFactory = context.getBeanFactory();
+		// 注册args参数为单例bean
 		beanFactory.registerSingleton("springApplicationArguments", applicationArguments);
 		if (printedBanner != null) {
+			// 注册banner为单例bean
 			beanFactory.registerSingleton("springBootBanner", printedBanner);
 		}
 		if (beanFactory instanceof DefaultListableBeanFactory) {
+			// 设置beanFactory中是否允许重复bean覆盖 allowBeanDefinitionOverriding 值从哪来的未知
 			((DefaultListableBeanFactory) beanFactory)
 					.setAllowBeanDefinitionOverriding(this.allowBeanDefinitionOverriding);
 		}
+		//默认false
 		if (this.lazyInitialization) {
 			context.addBeanFactoryPostProcessor(new LazyInitializationBeanFactoryPostProcessor());
 		}
 		// Load the sources
+		// 加载main方法所在类
 		Set<Object> sources = getAllSources();
 		Assert.notEmpty(sources, "Sources must not be empty");
+		//加载启动类，重点
 		load(context, sources.toArray(new Object[0]));
+		//加载完，但在刷新之前
 		listeners.contextLoaded(context);
 	}
 
@@ -403,13 +427,30 @@ public class SpringApplication {
 	}
 
 	private void configureHeadlessProperty() {
+		/**
+		 * 给属性设值System.setProperty(),它的值来源于System.getProperty(),
+		 * 奇怪了,为什么把属性从一个地方取出来,然后又设置到同一个地方,这不是多此一举吗?
+		 * 其实这是因为System中的两个读写属性的方法不对等
+		 * System中getProperty()有2个重载方法,但却只有一个setProperty()方法,
+		 * 其中getProperty()有单参和双参两方法,单参就是简单的获取属性,有就有,没有就没有,
+		 * 双参则聪明一点,在没有的时候会返回一个调用者指定的默认值,
+		 * 所以经过这样操作后,不管有没有那个属性,最终都能保证有.
+		 * 所以先取后设.
+		 * 那么:做了这样的操作后,SpringBoot想干什么呢?
+		 * 其实是想设置该应用程序,即使没有检测到显示器,也允许其启动.
+		 * 对于服务器来说,是不需要显示器的,所以要这样设置.
+		 */
 		System.setProperty(SYSTEM_PROPERTY_JAVA_AWT_HEADLESS,
 				System.getProperty(SYSTEM_PROPERTY_JAVA_AWT_HEADLESS, Boolean.toString(this.headless)));
 	}
 
 	private SpringApplicationRunListeners getRunListeners(String[] args) {
 		Class<?>[] types = new Class<?>[] { SpringApplication.class, String[].class };
+		//创建一个SpringApplicationRunListeners，参数为getSpringFactoriesInstances获取到的实例
 		return new SpringApplicationRunListeners(logger,
+				// 这个方法在上一讲讲过，其内部逻辑大概是读取所有的spring.factories中类，
+				// 然后筛选key是SpringApplicationRunListener.class名字的键值对，最后将这些类实例化
+				//得到EventPublishingRunListener
 				getSpringFactoriesInstances(SpringApplicationRunListener.class, types, this, args));
 	}
 
@@ -417,16 +458,38 @@ public class SpringApplication {
 		return getSpringFactoriesInstances(type, new Class<?>[] {});
 	}
 
+	//读取所有的spring.factories中类
+	//主要是用来获取指定类型的实例集合
+
+	/**
+	 *
+	 * @param type SpringApplicationRunListener.Class
+	 * @param parameterTypes  Class<?>[] 包含 SpringApplication.class和String[].class
+	 * @param args  SpringApplication实例和实际参数
+	 * @param <T>
+	 * @return
+	 */
 	private <T> Collection<T> getSpringFactoriesInstances(Class<T> type, Class<?>[] parameterTypes, Object... args) {
 		ClassLoader classLoader = getClassLoader();
 		// Use names and ensure unique to protect against duplicates
+		//获取spring.factories中type得全路径类名
 		Set<String> names = new LinkedHashSet<>(SpringFactoriesLoader.loadFactoryNames(type, classLoader));
+		//创建实例
 		List<T> instances = createSpringFactoriesInstances(type, parameterTypes, classLoader, args, names);
+		//排序
 		AnnotationAwareOrderComparator.sort(instances);
 		return instances;
 	}
 
-	@SuppressWarnings("unchecked")
+	/**
+	 *
+	 * @param type SpringApplicationRunListener.Class
+	 * @param parameterTypes  Class<?>[] 包含 SpringApplication.class和String[].class
+	 * @param args SpringApplication实例和实际参数
+	 * @param names  spring.factories中获得的beanName集合
+	 * @param <T>
+	 * @return
+	 */
 	private <T> List<T> createSpringFactoriesInstances(Class<T> type, Class<?>[] parameterTypes,
 			ClassLoader classLoader, Object[] args, Set<String> names) {
 		List<T> instances = new ArrayList<>(names.size());
@@ -434,7 +497,9 @@ public class SpringApplication {
 			try {
 				Class<?> instanceClass = ClassUtils.forName(name, classLoader);
 				Assert.isAssignable(type, instanceClass);
+				//获取构造函数
 				Constructor<?> constructor = instanceClass.getDeclaredConstructor(parameterTypes);
+				//初始化对象
 				T instance = (T) BeanUtils.instantiateClass(constructor, args);
 				instances.add(instance);
 			}
@@ -523,6 +588,7 @@ public class SpringApplication {
 	}
 
 	private void configureIgnoreBeanInfo(ConfigurableEnvironment environment) {
+		//得到系统属性spring.beaninfo.ignore，如果为空设置为true
 		if (System.getProperty(CachedIntrospectionResults.IGNORE_BEANINFO_PROPERTY_NAME) == null) {
 			Boolean ignore = environment.getProperty("spring.beaninfo.ignore", Boolean.class, Boolean.TRUE);
 			System.setProperty(CachedIntrospectionResults.IGNORE_BEANINFO_PROPERTY_NAME, ignore.toString());
@@ -582,6 +648,10 @@ public class SpringApplication {
 						"Unable create a default ApplicationContext, please specify an ApplicationContextClass", ex);
 			}
 		}
+		//以下重要参数 AnnotationConfigServletWebServerApplicationContext 构造函数初始化时已经初始化好
+		//this.reader = new AnnotatedBeanDefinitionReader(this);
+		//this.scanner = new ClassPathBeanDefinitionScanner(this);
+		//父类 GenericApplicationContext() 的构造函数 this.beanFactory = new DefaultListableBeanFactory()
 		return (ConfigurableApplicationContext) BeanUtils.instantiateClass(contextClass);
 	}
 
@@ -668,13 +738,19 @@ public class SpringApplication {
 
 	/**
 	 * Load beans into the application context.
-	 * @param context the context to load beans into
-	 * @param sources the sources to load
+	 * @param context the context to load beans into (容器
+	 * @param sources the sources to load  (main方法主类)
 	 */
 	protected void load(ApplicationContext context, Object[] sources) {
 		if (logger.isDebugEnabled()) {
 			logger.debug("Loading source " + StringUtils.arrayToCommaDelimitedString(sources));
 		}
+		// 获取BeanDefinition加载器 为什么使用BeanDefinitionLoader
+		//首先，我们得知道Spring的bean资源来自各种地方，如xml、annotation等，
+		// 那么这些bean在配置的时候也就是对bean进行定义，而这些定义映射到内存中的对象就是BeanDefinition的对象，
+		// Spring后续会根据BeanDefinition再获取具体的bean。
+		//简单来说就是：配置 --> BeanDefinition --> Bean 这样一个逻辑
+		//后续我们会看到BeanDefinitionLoader会将主类加载成BeanDefinition，然后注册到ApplicationContext当中
 		BeanDefinitionLoader loader = createBeanDefinitionLoader(getBeanDefinitionRegistry(context), sources);
 		if (this.beanNameGenerator != null) {
 			loader.setBeanNameGenerator(this.beanNameGenerator);
@@ -685,6 +761,7 @@ public class SpringApplication {
 		if (this.environment != null) {
 			loader.setEnvironment(this.environment);
 		}
+		// 加载资源
 		loader.load();
 	}
 
@@ -714,12 +791,15 @@ public class SpringApplication {
 	 * Get the bean definition registry.
 	 * @param context the application context
 	 * @return the BeanDefinitionRegistry if it can be determined
+	 *
 	 */
 	private BeanDefinitionRegistry getBeanDefinitionRegistry(ApplicationContext context) {
 		if (context instanceof BeanDefinitionRegistry) {
+			//返回AnnotationConfigServletWebServerApplicationContext
 			return (BeanDefinitionRegistry) context;
 		}
 		if (context instanceof AbstractApplicationContext) {
+			// 返回DefaultListableBeanFactory
 			return (BeanDefinitionRegistry) ((AbstractApplicationContext) context).getBeanFactory();
 		}
 		throw new IllegalStateException("Could not locate BeanDefinitionRegistry");
@@ -1137,13 +1217,17 @@ public class SpringApplication {
 	 * primary sources specified in the constructor with any additional ones that have
 	 * been {@link #setSources(Set) explicitly set}.
 	 * @return an immutable set of all sources
+	 * primarySources是在SpringApplication初始化的时候设置的，
+	 * 而sources默认是没有的。所在getAllSoures方法将返回main方法所在的主类。
 	 */
 	public Set<Object> getAllSources() {
 		Set<Object> allSources = new LinkedHashSet<>();
 		if (!CollectionUtils.isEmpty(this.primarySources)) {
+			// 添加主类
 			allSources.addAll(this.primarySources);
 		}
 		if (!CollectionUtils.isEmpty(this.sources)) {
+			// 添加附加资源类
 			allSources.addAll(this.sources);
 		}
 		return Collections.unmodifiableSet(allSources);
@@ -1234,6 +1318,7 @@ public class SpringApplication {
 	 *
 	 */
 	public static ConfigurableApplicationContext run(Class<?> primarySource, String... args) {
+		//调用重载方法
 		return run(new Class<?>[] { primarySource }, args);
 	}
 
@@ -1245,6 +1330,7 @@ public class SpringApplication {
 	 * @return the running {@link ApplicationContext}
 	 */
 	public static ConfigurableApplicationContext run(Class<?>[] primarySources, String[] args) {
+		//通过 有参(参数是 main方法 入口类)构造函数 构建一个SpringApplication对象
 		return new SpringApplication(primarySources).run(args);
 	}
 

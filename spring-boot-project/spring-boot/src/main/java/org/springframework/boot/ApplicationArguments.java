@@ -24,12 +24,15 @@ import java.util.Set;
  *
  * @author Phillip Webb
  * @since 1.3.0
+ * ApplicationArguments接口提供对用于运行org.springframework.boot.SpringApplication的参数访问，
+ * 此接口只有一个实现类DefaultApplicationArguments
  */
 public interface ApplicationArguments {
 
 	/**
 	 * Return the raw unprocessed arguments that were passed to the application.
 	 * @return the arguments
+	 * 返回传递给应用程序的原始未处理参数返回传递给应用程序的原始未处理参数
 	 */
 	String[] getSourceArgs();
 
@@ -37,6 +40,7 @@ public interface ApplicationArguments {
 	 * Return the names of all option arguments. For example, if the arguments were
 	 * "--foo=bar --debug" would return the values {@code ["foo", "debug"]}.
 	 * @return the option names or an empty set
+	 * 返回所有选项参数的名称，例如，如果参数是"--foo=bar --debug"将会返回["foo", "debug"]
 	 */
 	Set<String> getOptionNames();
 
@@ -45,6 +49,7 @@ public interface ApplicationArguments {
 	 * option with the given name.
 	 * @param name the name to check
 	 * @return {@code true} if the arguments contain an option with the given name
+	 * 返回解析后的选项参数集合中是否包含给定名称的选项
 	 */
 	boolean containsOption(String name);
 
@@ -62,12 +67,20 @@ public interface ApplicationArguments {
 	 * </ul>
 	 * @param name the name of the option
 	 * @return a list of option values for the given name
+	 *  返回与具有给定名称的arguments选项关联的值的集合
+	 *  如果该选项存在并且没有参数值（例如：”--foo“）,则返回一个空集合
+	 *  如果该选项存在并且只有一个值 (例如: "--foo=bar"), 则返回一个包含一个元素的集合["bar"]
+	 *  如果该选项存在并且有多个值（例如："--foo=bar --foo=baz"）,则返回一个包含每个值元素的集合["bar", "baz"]
+	 *  如果选项不存在，则返回null
+	 *  @param name 选项名称
+	 *  @return 返回选项值的集合（不存在返回null）
 	 */
 	List<String> getOptionValues(String name);
 
 	/**
 	 * Return the collection of non-option arguments parsed.
 	 * @return the non-option arguments or an empty list
+	 * 返回已解析的非选项参数，不存在返回空集合
 	 */
 	List<String> getNonOptionArgs();
 
