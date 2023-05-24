@@ -165,6 +165,7 @@ class BeanDefinitionLoader {
 			((GroovyBeanDefinitionReader) this.groovyReader).beans(loader.getBeans());
 		}
 		if (isEligible(source)) {
+			//annotatedReader=构造函数中初始化AnnotatedBeanDefinitionReader
 			this.annotatedReader.register(source);
 		}
 	}

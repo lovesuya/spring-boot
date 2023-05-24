@@ -142,6 +142,7 @@ public class ServletWebServerApplicationContext extends GenericWebApplicationCon
 	@Override
 	public final void refresh() throws BeansException, IllegalStateException {
 		try {
+			//调用AbstractApplicationContext的refresh
 			super.refresh();
 		}
 		catch (RuntimeException ex) {
@@ -157,6 +158,7 @@ public class ServletWebServerApplicationContext extends GenericWebApplicationCon
 	protected void onRefresh() {
 		super.onRefresh();
 		try {
+			//创建WEB服务，tomcat/jetty
 			createWebServer();
 		}
 		catch (Throwable ex) {
@@ -176,6 +178,7 @@ public class ServletWebServerApplicationContext extends GenericWebApplicationCon
 		WebServer webServer = this.webServer;
 		ServletContext servletContext = getServletContext();
 		if (webServer == null && servletContext == null) {
+			//getApplicationStartup=DefaultApplicationStartup，返回DefaultStartupStep
 			StartupStep createWebServer = this.getApplicationStartup().start("spring.boot.webserver.create");
 			ServletWebServerFactory factory = getWebServerFactory();
 			createWebServer.tag("factory", factory.getClass().toString());
@@ -205,6 +208,9 @@ public class ServletWebServerApplicationContext extends GenericWebApplicationCon
 	 */
 	protected ServletWebServerFactory getWebServerFactory() {
 		// Use bean names so that we don't consider the hierarchy
+		//JettyServletWebServerFactory或者TomcatServletWebServerFactory
+		//->AbstractServletWebServerFactory->ConfigurableServletWebServerFactory->ServletWebServerFactory
+		//autoconfig->ServletWebServerFactoryAutoConfiguration会判定注入哪个(Jetty/tomcat)
 		String[] beanNames = getBeanFactory().getBeanNamesForType(ServletWebServerFactory.class);
 		if (beanNames.length == 0) {
 			throw new ApplicationContextException("Unable to start ServletWebServerApplicationContext due to missing "
@@ -214,6 +220,7 @@ public class ServletWebServerApplicationContext extends GenericWebApplicationCon
 			throw new ApplicationContextException("Unable to start ServletWebServerApplicationContext due to multiple "
 					+ "ServletWebServerFactory beans : " + StringUtils.arrayToCommaDelimitedString(beanNames));
 		}
+		//说明只有一个类型为ServletWebServerFactory的bean，直接根据bean名称从spring IOC容器中获取spring bean对象，并返回
 		return getBeanFactory().getBean(beanNames[0], ServletWebServerFactory.class);
 	}
 

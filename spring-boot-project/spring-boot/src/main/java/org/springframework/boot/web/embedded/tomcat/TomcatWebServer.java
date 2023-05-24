@@ -108,21 +108,27 @@ public class TomcatWebServer implements WebServer {
 		logger.info("Tomcat initialized with port(s): " + getPortsDescription(false));
 		synchronized (this.monitor) {
 			try {
+				//设置Engine的id
 				addInstanceIdToEngineName();
-
+				//获取Context（TomcatEmbeddedContext  2.1中创建出来的）
 				Context context = findContext();
+				//添加监听器 TomcatEmbeddedContext
+				//在服务启动时如果有连接进来先删除连接，以便在启动服务时不会发生协议绑定。
 				context.addLifecycleListener((event) -> {
 					if (context.equals(event.getSource()) && Lifecycle.START_EVENT.equals(event.getType())) {
 						// Remove service connectors so that protocol binding doesn't
 						// happen when the service is started.
+						//删除ServiceConnectors，以便在启动服务时不会发生协议绑定
 						removeServiceConnectors();
 					}
 				});
 
 				// Start the server to trigger initialization listeners
+				//2.2.1 启动Tomcat
 				this.tomcat.start();
 
 				// We can re-throw failure exception directly in the main thread
+				//Tomcat启动有异常需要在主线程中抛出
 				rethrowDeferredStartupExceptions();
 
 				try {
@@ -134,6 +140,7 @@ public class TomcatWebServer implements WebServer {
 
 				// Unlike Jetty, all Tomcat threads are daemon threads. We create a
 				// blocking non-daemon to stop immediate shutdown
+				//开启阻塞非守护线程停止web容器
 				startDaemonAwaitThread();
 			}
 			catch (Exception ex) {

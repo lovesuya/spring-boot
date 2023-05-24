@@ -50,6 +50,7 @@ public interface SpringApplicationRunListener {
 	 * @deprecated since 2.4.0 for removal in 2.6.0 in favor of
 	 * {@link #starting(ConfigurableBootstrapContext)}
 	 */
+	//当run方法第一次启动时立即调用，可用于非常早期的初始化
 	@Deprecated
 	default void starting() {
 	}
@@ -72,6 +73,7 @@ public interface SpringApplicationRunListener {
 	 * @deprecated since 2.4.0 for removal in 2.6.0 in favor of
 	 * {@link #environmentPrepared(ConfigurableBootstrapContext, ConfigurableEnvironment)}
 	 */
+	////在ApplicationContext创建之前，一旦环境environment准备好就调用。
 	@Deprecated
 	default void environmentPrepared(ConfigurableEnvironment environment) {
 	}
@@ -81,6 +83,7 @@ public interface SpringApplicationRunListener {
 	 * before sources have been loaded.
 	 * @param context the application context
 	 */
+	//在资源（可以理解为配置主类）被加载完成之前，一旦ApplicationContext被创建并准备好就立马调用，
 	default void contextPrepared(ConfigurableApplicationContext context) {
 	}
 
@@ -89,6 +92,7 @@ public interface SpringApplicationRunListener {
 	 * refreshed.
 	 * @param context the application context
 	 */
+	//在资源加载完成之后，但在刷新之前调用
 	default void contextLoaded(ConfigurableApplicationContext context) {
 	}
 
@@ -99,6 +103,7 @@ public interface SpringApplicationRunListener {
 	 * @param context the application context.
 	 * @since 2.0.0
 	 */
+	//上下文已刷新，应用程序已启动，但是CommandLineRunner和ApplicationRunner尚未调用。
 	default void started(ConfigurableApplicationContext context) {
 	}
 
@@ -109,6 +114,7 @@ public interface SpringApplicationRunListener {
 	 * @param context the application context.
 	 * @since 2.0.0
 	 */
+	//当ApplicationContext已经refresh且所有的CommandLineRunner和ApplicationRunner都已被调用时，在run方法完成之前立即调用
 	default void running(ConfigurableApplicationContext context) {
 	}
 
@@ -119,6 +125,7 @@ public interface SpringApplicationRunListener {
 	 * @param exception the failure
 	 * @since 2.0.0
 	 */
+	//在运行应用程序时发生故障时调用
 	default void failed(ConfigurableApplicationContext context, Throwable exception) {
 	}
 

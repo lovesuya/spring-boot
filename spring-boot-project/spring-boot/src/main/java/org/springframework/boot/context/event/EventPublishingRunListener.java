@@ -50,16 +50,19 @@ import org.springframework.util.ErrorHandler;
  */
 public class EventPublishingRunListener implements SpringApplicationRunListener, Ordered {
 
+	//启动类实例对象
 	private final SpringApplication application;
 
+	//参数
 	private final String[] args;
-
+	//ApplicationListener监听器接口代理广播类
 	private final SimpleApplicationEventMulticaster initialMulticaster;
 
 	public EventPublishingRunListener(SpringApplication application, String[] args) {
 		this.application = application;
 		this.args = args;
 		this.initialMulticaster = new SimpleApplicationEventMulticaster();
+		//获取应用程序的监听器类，并循环添加到代理类的监听器助手属性对象中
 		for (ApplicationListener<?> listener : application.getListeners()) {
 			this.initialMulticaster.addApplicationListener(listener);
 		}
