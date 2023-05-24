@@ -45,6 +45,7 @@ public interface ApplicationContextFactory {
 		try {
 			switch (webApplicationType) {
 			case SERVLET:
+				//父类GenericApplicationContext中this.beanFactory = new DefaultListableBeanFactory()
 				return new AnnotationConfigServletWebServerApplicationContext();
 			case REACTIVE:
 				return new AnnotationConfigReactiveWebServerApplicationContext();
