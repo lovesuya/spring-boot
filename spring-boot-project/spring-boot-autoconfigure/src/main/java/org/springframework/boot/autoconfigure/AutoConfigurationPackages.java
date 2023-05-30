@@ -103,7 +103,10 @@ public abstract class AutoConfigurationPackages {
 	/**
 	 * {@link ImportBeanDefinitionRegistrar} to store the base package from the importing
 	 * configuration.
+	 * 实现了ImportBeanDefinitionRegistrar 在ConfigurationClassPostProcessor的processConfigBeanDefinitions方法中
+	 * this.reader.loadBeanDefinitions(configClasses)最终调用ImportBeanDefinitionRegistrarde的registerBeanDefinitions方法
 	 */
+
 	static class Registrar implements ImportBeanDefinitionRegistrar, DeterminableImports {
 
 		@Override

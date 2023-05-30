@@ -358,7 +358,6 @@ public class SpringApplication {
 			context = createApplicationContext();
 			context.setApplicationStartup(this.applicationStartup);
 
-			//资源加载之后，refresh方法调用之前调用监听器的contextLoaded方法，传递ApplicationPreparedEvent事件
 			//刷新容器之前的准备，将environment保存到容器中，调用监听器的contextPrepared方法，资源加载之后，调用监听器的contextLoaded方法
 			prepareContext(bootstrapContext, context, environment, listeners, applicationArguments, printedBanner);
 			//刷新Context容器
@@ -372,6 +371,9 @@ public class SpringApplication {
 			}
 			//调用监听器的contextLoaded方法
 			listeners.started(context);
+			//用于调用项目中自定义的执行器XxxRunner类，使得在项目启动完成后立即执行一些特定程序
+			//Runner 运行器用于在服务启动时进行一些业务初始化操作，这些操作只在服务启动后执行一次。
+			//Spring Boot提供了ApplicationRunner和CommandLineRunner两种服务接口
 			callRunners(context, applicationArguments);
 		}
 		catch (Throwable ex) {
@@ -452,6 +454,7 @@ public class SpringApplication {
 		//将environment保存到容器中
 		context.setEnvironment(environment);
 		postProcessApplicationContext(context);
+		//调用实现实现ApplicationContextInitializer接口的initialize方法，将beanFactoryPostProcessorr加入到beanFactoryPostProcessors中
 		applyInitializers(context);
 		//调用监听器的contextPrepared方法
 		listeners.contextPrepared(context);
