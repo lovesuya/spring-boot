@@ -131,6 +131,7 @@ class OriginTrackedPropertiesLoader {
 		buffer.setLength(0);
 		boolean previousWhitespace = false;
 		while (!reader.isEndOfLine()) {
+			// 判断读取到的字节是否为'=' 或者为 ':'，如果是则直接返回读取都的buffer内容
 			if (reader.isPropertyDelimiter()) {
 				reader.read();
 				return buffer.toString();

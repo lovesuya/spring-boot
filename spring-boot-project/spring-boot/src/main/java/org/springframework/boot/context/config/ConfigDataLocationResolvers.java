@@ -97,6 +97,9 @@ class ConfigDataLocationResolvers {
 		return Collections.unmodifiableList(reordered);
 	}
 
+	/**
+	 * 扫描代码片段3
+	 */
 	List<ConfigDataResolutionResult> resolve(ConfigDataLocationResolverContext context, ConfigDataLocation location,
 			Profiles profiles) {
 		if (location == null) {
@@ -104,14 +107,23 @@ class ConfigDataLocationResolvers {
 		}
 		for (ConfigDataLocationResolver<?> resolver : getResolvers()) {
 			if (resolver.isResolvable(context, location)) {
+				// 进入扫描代码片段4
 				return resolve(resolver, context, location, profiles);
 			}
 		}
 		throw new UnsupportedConfigDataLocationException(location);
 	}
 
+	/**
+	 * 扫描代码片段4
+	 * resolver 是ConfigDataLocationResolver的factories中的
+	 * StandardConfigDataLocationResolver和ConfigTreeConfigDataLocationResolver
+	 * 构造函数时加载的
+	 */
 	private List<ConfigDataResolutionResult> resolve(ConfigDataLocationResolver<?> resolver,
 			ConfigDataLocationResolverContext context, ConfigDataLocation location, Profiles profiles) {
+		// 这里的 debug 会复杂一点，因为传入了一个 Supplier 函数
+		// 如下面的扫描代码片段5，内部执行了 Supplier 函数的 get 方法，也就是这里的 lambda 表达式中的 resolve 方法
 		List<ConfigDataResolutionResult> resolved = resolve(location, false, () -> resolver.resolve(context, location));
 		if (profiles == null) {
 			return resolved;
@@ -121,8 +133,15 @@ class ConfigDataLocationResolvers {
 		return merge(resolved, profileSpecific);
 	}
 
+	/**
+	 * 扫描代码片段5
+	 */
 	private List<ConfigDataResolutionResult> resolve(ConfigDataLocation location, boolean profileSpecific,
 			Supplier<List<? extends ConfigDataResource>> resolveAction) {
+		// 前面4个代码片段，不管是中间变量还是 return 的结果，都是 List<ConfigDataResolutionResult>
+		// 而这里出现了 List<ConfigDataResource>，显而易见，这一句代码是真正执行扫描的入口
+		// 上面的几段代码只是对结果集的封装与处理
+		// 代码片段4中提到，这个 get 就是 resolve，所以我们进入扫描代码片段6
 		List<ConfigDataResource> resources = nonNullList(resolveAction.get());
 		List<ConfigDataResolutionResult> resolved = new ArrayList<>(resources.size());
 		for (ConfigDataResource resource : resources) {

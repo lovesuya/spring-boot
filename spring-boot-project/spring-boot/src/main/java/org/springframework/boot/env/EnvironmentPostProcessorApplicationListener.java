@@ -83,6 +83,7 @@ public class EnvironmentPostProcessorApplicationListener implements SmartApplica
 
 	@Override
 	public void onApplicationEvent(ApplicationEvent event) {
+		//准备阶段
 		if (event instanceof ApplicationEnvironmentPreparedEvent) {
 			onApplicationEnvironmentPreparedEvent((ApplicationEnvironmentPreparedEvent) event);
 		}
@@ -97,6 +98,9 @@ public class EnvironmentPostProcessorApplicationListener implements SmartApplica
 	private void onApplicationEnvironmentPreparedEvent(ApplicationEnvironmentPreparedEvent event) {
 		ConfigurableEnvironment environment = event.getEnvironment();
 		SpringApplication application = event.getSpringApplication();
+		//获取EnvironmentPostProcessors的实现类
+		//包括我们的配置文件加载,旧版本的ConfigFileApplicationListener已经弃用，
+		//新版本的使用ConfigDataEnvironmentPostProcessor
 		for (EnvironmentPostProcessor postProcessor : getEnvironmentPostProcessors(application.getResourceLoader(),
 				event.getBootstrapContext())) {
 			postProcessor.postProcessEnvironment(environment, application);
@@ -118,7 +122,9 @@ public class EnvironmentPostProcessorApplicationListener implements SmartApplica
 	List<EnvironmentPostProcessor> getEnvironmentPostProcessors(ResourceLoader resourceLoader,
 			ConfigurableBootstrapContext bootstrapContext) {
 		ClassLoader classLoader = (resourceLoader != null) ? resourceLoader.getClassLoader() : null;
+		//postProcessorsFactory默认使用ReflectionEnvironmentPostProcessorsFactory且会加载factories中的EnvironmentPostProcessor作为他的属性值
 		EnvironmentPostProcessorsFactory postProcessorsFactory = this.postProcessorsFactory.apply(classLoader);
+		//返回EnvironmentPostProcessor的实现类
 		return postProcessorsFactory.getEnvironmentPostProcessors(this.deferredLogs, bootstrapContext);
 	}
 

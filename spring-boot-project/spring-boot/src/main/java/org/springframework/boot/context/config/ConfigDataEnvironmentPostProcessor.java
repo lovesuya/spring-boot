@@ -47,7 +47,41 @@ import org.springframework.util.StringUtils;
  * @author Madhura Bhave
  * @author Nguyen Bao Sach
  * @since 2.4.0
+ * 新版本使用其加载配置文件
+ * 1、扫描目录的顺序 addAll 进集合，先扫描的在前，后扫描的在后
+ * 第一批
+ * file:./
+ * file:./config/
+ * file:./config/ * /
+ * 第二批
+ * classpath:/
+ * classpath:/config/
+ * 2、扫描文件的顺序 加入双端队列（Deque）的方式是 addFirst
+ * properties
+ * xml
+ * yml
+ * yaml
+ * 3、加载文件的顺序 循环是倒序的所以与扫描一致
+ * properties
+ * xml
+ * yml
+ * yaml
+ * 4、加载目录的顺序 在加载中，for 循环是逆序的，所以目录的加载顺序刚好与扫描顺序相反
+ * 第一批
+ * file:./config/ * /
+ * file:./config/
+ * file:./
+ * 第二批
+ * classpath:/config/
+ * classpath:/
+ * 5、越先被加载的配置文件，在环境中被应用的优先级越高
+ * ConfigDataEnvironment中的DEFAULT_SEARCH_LOCATIONS
+ *
+ * Contributor是根据locations倒序，所以file在classpath前面，初始化classpath时classpath在file前面
+ * references.addAll文件采用添加的方式
+ * 文件加载时倒序，所以后加入的先加载
  */
+
 public class ConfigDataEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
 
 	/**
@@ -58,6 +92,7 @@ public class ConfigDataEnvironmentPostProcessor implements EnvironmentPostProces
 	/**
 	 * Property used to determine what action to take when a
 	 * {@code ConfigDataLocationNotFoundException} is thrown.
+	 *
 	 * @see ConfigDataNotFoundAction
 	 */
 	public static final String ON_LOCATION_NOT_FOUND_PROPERTY = ConfigDataEnvironment.ON_NOT_FOUND_PROPERTY;
@@ -71,13 +106,13 @@ public class ConfigDataEnvironmentPostProcessor implements EnvironmentPostProces
 	private final ConfigDataEnvironmentUpdateListener environmentUpdateListener;
 
 	public ConfigDataEnvironmentPostProcessor(DeferredLogFactory logFactory,
-			ConfigurableBootstrapContext bootstrapContext) {
+											  ConfigurableBootstrapContext bootstrapContext) {
 		this(logFactory, bootstrapContext, null);
 	}
 
 	public ConfigDataEnvironmentPostProcessor(DeferredLogFactory logFactory,
-			ConfigurableBootstrapContext bootstrapContext,
-			ConfigDataEnvironmentUpdateListener environmentUpdateListener) {
+											  ConfigurableBootstrapContext bootstrapContext,
+											  ConfigDataEnvironmentUpdateListener environmentUpdateListener) {
 		this.logFactory = logFactory;
 		this.logger = logFactory.getLog(getClass());
 		this.bootstrapContext = bootstrapContext;
@@ -95,13 +130,14 @@ public class ConfigDataEnvironmentPostProcessor implements EnvironmentPostProces
 	}
 
 	void postProcessEnvironment(ConfigurableEnvironment environment, ResourceLoader resourceLoader,
-			Collection<String> additionalProfiles) {
+								Collection<String> additionalProfiles) {
 		try {
 			this.logger.trace("Post-processing environment to add config data");
 			resourceLoader = (resourceLoader != null) ? resourceLoader : new DefaultResourceLoader();
+			// getConfigDataEnvironment 是对环境的一层封装，返回ConfigDataEnvironment对象，
+			// 对配置文件的读取是processAndApply方法
 			getConfigDataEnvironment(environment, resourceLoader, additionalProfiles).processAndApply();
-		}
-		catch (UseLegacyConfigProcessingException ex) {
+		} catch (UseLegacyConfigProcessingException ex) {
 			this.logger.debug(LogMessage.format("Switching to legacy config file processing [%s]",
 					ex.getConfigurationProperty()));
 			configureAdditionalProfiles(environment, additionalProfiles);
@@ -110,13 +146,13 @@ public class ConfigDataEnvironmentPostProcessor implements EnvironmentPostProces
 	}
 
 	ConfigDataEnvironment getConfigDataEnvironment(ConfigurableEnvironment environment, ResourceLoader resourceLoader,
-			Collection<String> additionalProfiles) {
+												   Collection<String> additionalProfiles) {
 		return new ConfigDataEnvironment(this.logFactory, this.bootstrapContext, environment, resourceLoader,
 				additionalProfiles, this.environmentUpdateListener);
 	}
 
 	private void configureAdditionalProfiles(ConfigurableEnvironment environment,
-			Collection<String> additionalProfiles) {
+											 Collection<String> additionalProfiles) {
 		if (!CollectionUtils.isEmpty(additionalProfiles)) {
 			Set<String> profiles = new LinkedHashSet<>(additionalProfiles);
 			profiles.addAll(Arrays.asList(environment.getActiveProfiles()));
@@ -125,7 +161,7 @@ public class ConfigDataEnvironmentPostProcessor implements EnvironmentPostProces
 	}
 
 	private void postProcessUsingLegacyApplicationListener(ConfigurableEnvironment environment,
-			ResourceLoader resourceLoader) {
+														   ResourceLoader resourceLoader) {
 		getLegacyListener().addPropertySources(environment, resourceLoader);
 	}
 
@@ -138,6 +174,7 @@ public class ConfigDataEnvironmentPostProcessor implements EnvironmentPostProces
 	 * Apply {@link ConfigData} post-processing to an existing {@link Environment}. This
 	 * method can be useful when working with an {@link Environment} that has been created
 	 * directly and not necessarily as part of a {@link SpringApplication}.
+	 *
 	 * @param environment the environment to apply {@link ConfigData} to
 	 */
 	public static void applyTo(ConfigurableEnvironment environment) {
@@ -148,14 +185,15 @@ public class ConfigDataEnvironmentPostProcessor implements EnvironmentPostProces
 	 * Apply {@link ConfigData} post-processing to an existing {@link Environment}. This
 	 * method can be useful when working with an {@link Environment} that has been created
 	 * directly and not necessarily as part of a {@link SpringApplication}.
-	 * @param environment the environment to apply {@link ConfigData} to
-	 * @param resourceLoader the resource loader to use
-	 * @param bootstrapContext the bootstrap context to use or {@code null} to use a
-	 * throw-away context
+	 *
+	 * @param environment        the environment to apply {@link ConfigData} to
+	 * @param resourceLoader     the resource loader to use
+	 * @param bootstrapContext   the bootstrap context to use or {@code null} to use a
+	 *                           throw-away context
 	 * @param additionalProfiles any additional profiles that should be applied
 	 */
 	public static void applyTo(ConfigurableEnvironment environment, ResourceLoader resourceLoader,
-			ConfigurableBootstrapContext bootstrapContext, String... additionalProfiles) {
+							   ConfigurableBootstrapContext bootstrapContext, String... additionalProfiles) {
 		applyTo(environment, resourceLoader, bootstrapContext, Arrays.asList(additionalProfiles));
 	}
 
@@ -163,14 +201,15 @@ public class ConfigDataEnvironmentPostProcessor implements EnvironmentPostProces
 	 * Apply {@link ConfigData} post-processing to an existing {@link Environment}. This
 	 * method can be useful when working with an {@link Environment} that has been created
 	 * directly and not necessarily as part of a {@link SpringApplication}.
-	 * @param environment the environment to apply {@link ConfigData} to
-	 * @param resourceLoader the resource loader to use
-	 * @param bootstrapContext the bootstrap context to use or {@code null} to use a
-	 * throw-away context
+	 *
+	 * @param environment        the environment to apply {@link ConfigData} to
+	 * @param resourceLoader     the resource loader to use
+	 * @param bootstrapContext   the bootstrap context to use or {@code null} to use a
+	 *                           throw-away context
 	 * @param additionalProfiles any additional profiles that should be applied
 	 */
 	public static void applyTo(ConfigurableEnvironment environment, ResourceLoader resourceLoader,
-			ConfigurableBootstrapContext bootstrapContext, Collection<String> additionalProfiles) {
+							   ConfigurableBootstrapContext bootstrapContext, Collection<String> additionalProfiles) {
 		DeferredLogFactory logFactory = Supplier::get;
 		bootstrapContext = (bootstrapContext != null) ? bootstrapContext : new DefaultBootstrapContext();
 		ConfigDataEnvironmentPostProcessor postProcessor = new ConfigDataEnvironmentPostProcessor(logFactory,
@@ -182,18 +221,19 @@ public class ConfigDataEnvironmentPostProcessor implements EnvironmentPostProces
 	 * Apply {@link ConfigData} post-processing to an existing {@link Environment}. This
 	 * method can be useful when working with an {@link Environment} that has been created
 	 * directly and not necessarily as part of a {@link SpringApplication}.
-	 * @param environment the environment to apply {@link ConfigData} to
-	 * @param resourceLoader the resource loader to use
-	 * @param bootstrapContext the bootstrap context to use or {@code null} to use a
-	 * throw-away context
-	 * @param additionalProfiles any additional profiles that should be applied
+	 *
+	 * @param environment               the environment to apply {@link ConfigData} to
+	 * @param resourceLoader            the resource loader to use
+	 * @param bootstrapContext          the bootstrap context to use or {@code null} to use a
+	 *                                  throw-away context
+	 * @param additionalProfiles        any additional profiles that should be applied
 	 * @param environmentUpdateListener optional
-	 * {@link ConfigDataEnvironmentUpdateListener} that can be used to track
-	 * {@link Environment} updates.
+	 *                                  {@link ConfigDataEnvironmentUpdateListener} that can be used to track
+	 *                                  {@link Environment} updates.
 	 */
 	public static void applyTo(ConfigurableEnvironment environment, ResourceLoader resourceLoader,
-			ConfigurableBootstrapContext bootstrapContext, Collection<String> additionalProfiles,
-			ConfigDataEnvironmentUpdateListener environmentUpdateListener) {
+							   ConfigurableBootstrapContext bootstrapContext, Collection<String> additionalProfiles,
+							   ConfigDataEnvironmentUpdateListener environmentUpdateListener) {
 		DeferredLogFactory logFactory = Supplier::get;
 		bootstrapContext = (bootstrapContext != null) ? bootstrapContext : new DefaultBootstrapContext();
 		ConfigDataEnvironmentPostProcessor postProcessor = new ConfigDataEnvironmentPostProcessor(logFactory,

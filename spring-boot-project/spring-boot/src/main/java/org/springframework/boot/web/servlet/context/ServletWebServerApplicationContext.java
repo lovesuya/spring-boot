@@ -180,6 +180,7 @@ public class ServletWebServerApplicationContext extends GenericWebApplicationCon
 		if (webServer == null && servletContext == null) {
 			//getApplicationStartup=DefaultApplicationStartup，返回DefaultStartupStep
 			StartupStep createWebServer = this.getApplicationStartup().start("spring.boot.webserver.create");
+			//返回ServletWebServerFactoryAutoConfiguration自动注入初始化的对象
 			ServletWebServerFactory factory = getWebServerFactory();
 			createWebServer.tag("factory", factory.getClass().toString());
 			this.webServer = factory.getWebServer(getSelfInitializer());
@@ -209,7 +210,7 @@ public class ServletWebServerApplicationContext extends GenericWebApplicationCon
 	protected ServletWebServerFactory getWebServerFactory() {
 		// Use bean names so that we don't consider the hierarchy
 		//JettyServletWebServerFactory或者TomcatServletWebServerFactory
-		//->AbstractServletWebServerFactory->ConfigurableServletWebServerFactory->ServletWebServerFactory
+		//继承->AbstractServletWebServerFactory->ConfigurableServletWebServerFactory->ServletWebServerFactory
 		//autoconfig->ServletWebServerFactoryAutoConfiguration会判定注入哪个(Jetty/tomcat)
 		String[] beanNames = getBeanFactory().getBeanNamesForType(ServletWebServerFactory.class);
 		if (beanNames.length == 0) {

@@ -97,27 +97,55 @@ class ConfigDataEnvironmentContributors implements Iterable<ConfigDataEnvironmen
 		ConfigDataEnvironmentContributors result = this;
 		int processed = 0;
 		while (true) {
+			// 依次获取所有的 contributor
+			// 这里是对 contributor 的遍历，可以想象成一个链表或者队列，contributor 包含环境初始化中的各个生命周期（这个词可能不太合适，但是我想不到更好的词了）
+			// file目录和classpath是不同的 contributor，这里以 classpath 为例
+			// 第一阶段是 INITAL_IMPORT，字面意思就是初始化导入
+			// 这个阶段的 contributor 中就已经包含配置文件了要扫描的路径，所以会进行一次 resolveAndLoad
+			// 扫描和加载结束后，回反馈给 contributor，具体表现为其内部的 children
+			// children 包含两种值：EMPTY_LOCATION 和 BOUND_IMPORT
+			// EMPTY_LOCATION 是上一阶段的扫描加载中为空的目录
+			// BOUND_IMPORT 是已进行绑定的配置文件
+			// 下面是我的 debug 数据，只取了成功加载的那一部分
+			// BOUND_IMPORT optional:classpath:/;optional:classpath:/config/ class path resource [config/application.properties] []
+			// BOUND_IMPORT optional:classpath:/;optional:classpath:/config/ class path resource [config/application.yml] []
+			// BOUND_IMPORT optional:classpath:/;optional:classpath:/config/ class path resource [config/application.yaml] []
+			//
+			// 第二阶段为 UNBOUND_IMPORT，含义为未绑定的资源
+			// 这一阶段的目的是绑定上一阶段获取到的资源
+			// 绑定成功后，同样会反馈给 contributor，不过这次写回的就是 null 了
 			ConfigDataEnvironmentContributor contributor = getNextToProcess(result, activationContext, importPhase);
 			if (contributor == null) {
 				this.logger.trace(LogMessage.format("Processed imports for of %d contributors", processed));
 				return result;
 			}
+			// 第二阶段：绑定已导入的资源
+			// 绑定：其实就是检测下资源存不存在然后创建一个binder
+			// binder 会尝试与一些东西进行绑定
+			// 不过对配置文件的加载来说，没有多大影响
 			if (contributor.getKind() == Kind.UNBOUND_IMPORT) {
 				ConfigDataEnvironmentContributor bound = contributor.withBoundProperties(result, activationContext);
+				// 将绑定的结果回写入 contributor，并放回 contributor 链
 				result = new ConfigDataEnvironmentContributors(this.logger, this.bootstrapContext,
 						result.getRoot().withReplacement(contributor, bound));
 				continue;
 			}
+			// 第一阶段：扫描并加载
 			ConfigDataLocationResolverContext locationResolverContext = new ContributorConfigDataLocationResolverContext(
 					result, contributor, activationContext);
 			ConfigDataLoaderContext loaderContext = new ContributorDataLoaderContext(this);
+			// 从 contributor 获取扫描目录
 			List<ConfigDataLocation> imports = contributor.getImports();
 			this.logger.trace(LogMessage.format("Processing imports %s", imports));
+			// resolveAndload 就是加载配置文件
+			// resolve 是扫描，需要知道这里是一个循环，不同的 contributor 内含的扫描目录是不同的，其也有各自的含义，debug 时我们只需要看配置文件的扫描即可
+			// load 是加载，不同类型的配置文件有不同的加载器，后面会看到的
 			Map<ConfigDataResolutionResult, ConfigData> imported = importer.resolveAndLoad(activationContext,
 					locationResolverContext, loaderContext, imports);
 			this.logger.trace(LogMessage.of(() -> getImportedMessage(imported.keySet())));
 			ConfigDataEnvironmentContributor contributorAndChildren = contributor.withChildren(importPhase,
 					asContributors(imported));
+			// 将本次扫描加载的结果回写入 contributor，并放回 contributor 链
 			result = new ConfigDataEnvironmentContributors(this.logger, this.bootstrapContext,
 					result.getRoot().withReplacement(contributor, contributorAndChildren));
 			processed++;

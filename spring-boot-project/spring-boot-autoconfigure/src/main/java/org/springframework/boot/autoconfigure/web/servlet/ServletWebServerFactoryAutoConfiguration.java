@@ -69,6 +69,7 @@ import org.springframework.web.filter.ForwardedHeaderFilter;
 		ServletWebServerFactoryConfiguration.EmbeddedTomcat.class,
 		ServletWebServerFactoryConfiguration.EmbeddedJetty.class,
 		ServletWebServerFactoryConfiguration.EmbeddedUndertow.class })
+//自动注入
 public class ServletWebServerFactoryAutoConfiguration {
 
 	@Bean

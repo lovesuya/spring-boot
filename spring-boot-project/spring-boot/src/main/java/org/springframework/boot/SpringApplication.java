@@ -411,6 +411,7 @@ public class SpringApplication {
 		// 绑定环境资源信息
 		ConfigurationPropertySources.attach(environment);
 		//发布ApplicationEnvironmentPreparedEvent事件 其中就包括了Spring Boot默认配置文件的读取
+		//EnvironmentPostProcessorApplicationListener的onApplicationEvent事件
 		listeners.environmentPrepared(bootstrapContext, environment);
 		DefaultPropertiesPropertySource.moveToEnd(environment);
 		Assert.state(!environment.containsProperty("spring.main.environment-prefix"),

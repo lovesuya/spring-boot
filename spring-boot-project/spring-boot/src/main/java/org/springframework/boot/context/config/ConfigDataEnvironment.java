@@ -150,6 +150,7 @@ class ConfigDataEnvironment {
 		this.environmentUpdateListener = (environmentUpdateListener != null) ? environmentUpdateListener
 				: ConfigDataEnvironmentUpdateListener.NONE;
 		this.loaders = new ConfigDataLoaders(logFactory, bootstrapContext, resourceLoader.getClassLoader());
+		//contributors=ConfigDataEnvironmentContributors
 		this.contributors = createContributors(binder);
 	}
 
@@ -219,17 +220,25 @@ class ConfigDataEnvironment {
 	/**
 	 * Process all contributions and apply any newly imported property sources to the
 	 * {@link Environment}.
+	 * 扫描、加载和应用
 	 */
 	void processAndApply() {
+		//importer 是一个很关键的对象，包含了扫描的目录、扫描到的文件
+		//这里只是进行了实例化，还没有任何数据
 		ConfigDataImporter importer = new ConfigDataImporter(this.logFactory, this.notFoundAction, this.resolvers,
 				this.loaders);
 		registerBootstrapBinder(this.contributors, null, DENY_INACTIVE_BINDING);
+		// 里面对所有 SpringBoot 约定的配置进行了扫描和加载
 		ConfigDataEnvironmentContributors contributors = processInitial(this.contributors, importer);
+		// 创建上下文环境ConfigDataActivationContext
 		ConfigDataActivationContext activationContext = createActivationContext(
 				contributors.getBinder(null, BinderOption.FAIL_ON_BIND_TO_INACTIVE_SOURCE));
+		// process 开头的方法，内部逻辑与 processInitial 相似，所以下面几行就不讲了
+		// 区别就像方法名一样，processInitial 是初始化，这两个与激活相关
 		contributors = processWithoutProfiles(contributors, importer, activationContext);
 		activationContext = withProfiles(contributors, activationContext);
 		contributors = processWithProfiles(contributors, importer, activationContext);
+		//这一步将配置文件应用进环境
 		applyToEnvironment(contributors, activationContext, importer.getLoadedLocations(),
 				importer.getOptionalLocations());
 	}
@@ -237,6 +246,7 @@ class ConfigDataEnvironment {
 	private ConfigDataEnvironmentContributors processInitial(ConfigDataEnvironmentContributors contributors,
 			ConfigDataImporter importer) {
 		this.logger.trace("Processing initial config data environment contributors without activation context");
+		//调用处理器的方法
 		contributors = contributors.withProcessedImports(importer, null);
 		registerBootstrapBinder(contributors, null, DENY_INACTIVE_BINDING);
 		return contributors;
@@ -338,6 +348,7 @@ class ConfigDataEnvironment {
 	private void applyContributor(ConfigDataEnvironmentContributors contributors,
 			ConfigDataActivationContext activationContext, MutablePropertySources propertySources) {
 		this.logger.trace("Applying config data environment contributions");
+		// 遍历加载过程返回的 result，也就是一堆 contributor
 		for (ConfigDataEnvironmentContributor contributor : contributors) {
 			PropertySource<?> propertySource = contributor.getPropertySource();
 			if (contributor.getKind() == ConfigDataEnvironmentContributor.Kind.BOUND_IMPORT && propertySource != null) {
@@ -348,6 +359,10 @@ class ConfigDataEnvironment {
 				else {
 					this.logger
 							.trace(LogMessage.format("Adding imported property source '%s'", propertySource.getName()));
+					// 加入环境的资源集合，并且是放在最后
+					// 还记得我们加载配置文件的顺序吗，和扫描顺序一致
+					// properties > xml > yml > yaml
+					// 所以环境的资源集合中，几个配置文件的相对顺序也是如此
 					propertySources.addLast(propertySource);
 					this.environmentUpdateListener.onPropertySourceAdded(propertySource, contributor.getLocation(),
 							contributor.getResource());

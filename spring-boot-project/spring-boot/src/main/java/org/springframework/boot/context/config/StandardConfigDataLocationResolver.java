@@ -141,10 +141,18 @@ public class StandardConfigDataLocationResolver
 			throw new IllegalStateException("Unable to load config data from '" + configDataLocation + "'", ex);
 		}
 	}
-
+	/**
+	 * 扫描代码片段6
+	 */
 	@Override
 	public List<StandardConfigDataResource> resolveProfileSpecific(ConfigDataLocationResolverContext context,
 			ConfigDataLocation location, Profiles profiles) {
+		// 上面几段代码的参数无非是 localtion、profile 等基本信息
+		// 而这里的 getReferences 获取的是一个依赖集
+		// 在进入下一个 resolve 方法前，我们先看看这个依赖集是什么作用
+		// 这里传入了两个参数，context 就不用多说了，location.split() 需要提一句
+		// SpringBoot 内置的扫描目录是以分号隔开的字符串，这里的 split 方法就是以分号来分割字符串，变成一个目录地址的数组
+		// 而依赖集就是根据 SpringBoot 内置的规则获取的依赖地址
 		return resolve(getProfileSpecificReferences(context, location.split(), profiles));
 	}
 
@@ -154,6 +162,7 @@ public class StandardConfigDataLocationResolver
 		for (String profile : profiles) {
 			for (ConfigDataLocation configDataLocation : configDataLocations) {
 				String resourceLocation = getResourceLocation(context, configDataLocation);
+				// 是不是很熟悉，像极了 resolve 方法的层层嵌套，那么继续往里面看
 				references.addAll(getReferences(configDataLocation, resourceLocation, profile));
 			}
 		}
@@ -178,6 +187,7 @@ public class StandardConfigDataLocationResolver
 
 	private Set<StandardConfigDataReference> getReferences(ConfigDataLocation configDataLocation,
 			String resourceLocation, String profile) {
+		// 我们只看配置文件的扫描，配置文件扫描的是目录，所以这里只解析这段 if 里的代码
 		if (isDirectory(resourceLocation)) {
 			return getReferencesForDirectory(configDataLocation, resourceLocation, profile);
 		}
@@ -187,7 +197,9 @@ public class StandardConfigDataLocationResolver
 	private Set<StandardConfigDataReference> getReferencesForDirectory(ConfigDataLocation configDataLocation,
 			String directory, String profile) {
 		Set<StandardConfigDataReference> references = new LinkedHashSet<>();
+		// 配置文件的 name 为 application，这是 SpringBoot 约定好的，不是我们能更改的
 		for (String name : this.configNames) {
+			// 进入下一个方法 依赖代码片段4
 			Deque<StandardConfigDataReference> referencesForName = getReferencesForConfigName(name, configDataLocation,
 					directory, profile);
 			references.addAll(referencesForName);
@@ -195,11 +207,20 @@ public class StandardConfigDataLocationResolver
 		return references;
 	}
 
+	/**
+	 * 依赖代码片段4
+	 */
 	private Deque<StandardConfigDataReference> getReferencesForConfigName(String name,
 			ConfigDataLocation configDataLocation, String directory, String profile) {
 		Deque<StandardConfigDataReference> references = new ArrayDeque<>();
+		// PropertySourceLoader 在这个类的构造函数中初始化完毕
+		// 在 spring.factories 文件中可以看到一共有两个 loader
+		// PropertiesPropertySourceLoader 和 YamlPropertySourceLoader
+		// 分别是 （properties 与 xml）加载器、（yaml 与 yml）加载器
 		for (PropertySourceLoader propertySourceLoader : this.propertySourceLoaders) {
+			// 不同加载器有对应的文件扩展名
 			for (String extension : propertySourceLoader.getFileExtensions()) {
+				// 根据目录 + 文件名 + 激活名 + 扩展名创建一个资源依赖，并传入了对应的资源加载器
 				StandardConfigDataReference reference = new StandardConfigDataReference(configDataLocation, directory,
 						directory + name, profile, extension, propertySourceLoader);
 				if (!references.contains(reference)) {
@@ -243,9 +264,15 @@ public class StandardConfigDataLocationResolver
 		return resourceLocation.endsWith("/") || resourceLocation.endsWith(File.separator);
 	}
 
+	/**
+	 * 扫描代码片段7
+	 * 从这个 resolve 方法开始，限定符已经变成了 private
+	 * 开始涉及到真正的扫描逻辑了
+	 */
 	private List<StandardConfigDataResource> resolve(Set<StandardConfigDataReference> references) {
 		List<StandardConfigDataResource> resolved = new ArrayList<>();
 		for (StandardConfigDataReference reference : references) {
+			// 继续进入下一个 resolve 方法
 			resolved.addAll(resolve(reference));
 		}
 		if (resolved.isEmpty()) {
@@ -290,19 +317,35 @@ public class StandardConfigDataLocationResolver
 				.collect(Collectors.toCollection(LinkedHashSet::new));
 	}
 
+	/**
+	 * 扫描代码片段8
+	 */
 	private List<StandardConfigDataResource> resolve(StandardConfigDataReference reference) {
+		// 这个 isPattern 是判断依赖的路径字符串是否是模式串
+		// 比如 classpath:*
+		// 这类带 * 号的代表目录下的所有文件，那么就需要特殊的处理
+		// 我们加载配置文件的部分是确定文件地址的，所以走这个 if
 		if (!this.resourceLoader.isPattern(reference.getResourceLocation())) {
 			return resolveNonPattern(reference);
 		}
 		return resolvePattern(reference);
 	}
 
+	/**
+	 * 扫描代码片段9
+	 */
 	private List<StandardConfigDataResource> resolveNonPattern(StandardConfigDataReference reference) {
+		// 根据依赖地址加载资源
+		// 这里的加载和后面的 load 不是一个概念
+		// 这里只是将资源加载到内存，还没有开始解析
+		// 而 load 的加载是加载到 SpringBoot
 		Resource resource = this.resourceLoader.getResource(reference.getResourceLocation());
+		// 如果资源不存在并且是可跳过的，那么返回空集合
 		if (!resource.exists() && reference.isSkippable()) {
 			logSkippingResource(reference);
 			return Collections.emptyList();
 		}
+		// 资源存在的话就返回
 		return Collections.singletonList(createConfigResourceLocation(reference, resource));
 	}
 

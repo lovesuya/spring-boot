@@ -82,7 +82,9 @@ class ConfigDataImporter {
 			List<ConfigDataLocation> locations) {
 		try {
 			Profiles profiles = (activationContext != null) ? activationContext.getProfiles() : null;
+			// 扫描
 			List<ConfigDataResolutionResult> resolved = resolve(locationResolverContext, profiles, locations);
+			// 加载
 			return load(loaderContext, resolved);
 		}
 		catch (IOException ex) {
@@ -94,14 +96,19 @@ class ConfigDataImporter {
 			Profiles profiles, List<ConfigDataLocation> locations) {
 		List<ConfigDataResolutionResult> resolved = new ArrayList<>(locations.size());
 		for (ConfigDataLocation location : locations) {
+			//将所有扫描结果加入集合，从这里的 resolve 方法去看扫描代码片段2（resolve的方法）
 			resolved.addAll(resolve(locationResolverContext, profiles, location));
 		}
 		return Collections.unmodifiableList(resolved);
 	}
 
+	/**
+	 * 扫描代码片段2
+	 */
 	private List<ConfigDataResolutionResult> resolve(ConfigDataLocationResolverContext locationResolverContext,
 			Profiles profiles, ConfigDataLocation location) {
 		try {
+			// 进入扫描代码片段3
 			return this.resolvers.resolve(locationResolverContext, location, profiles);
 		}
 		catch (ConfigDataNotFoundException ex) {
@@ -113,18 +120,26 @@ class ConfigDataImporter {
 	private Map<ConfigDataResolutionResult, ConfigData> load(ConfigDataLoaderContext loaderContext,
 			List<ConfigDataResolutionResult> candidates) throws IOException {
 		Map<ConfigDataResolutionResult, ConfigData> result = new LinkedHashMap<>();
+		// 文件类型，这里的循环是倒序的，忽略覆不覆盖的问题，加载的顺序又与 candidates 内元素的顺序相反
+		// 一来一去，加载的顺序就和扫描的顺序一致了
 		for (int i = candidates.size() - 1; i >= 0; i--) {
 			ConfigDataResolutionResult candidate = candidates.get(i);
 			ConfigDataLocation location = candidate.getLocation();
+			// 前面也提到过，资源已经被加载到内存，这里直接拿
 			ConfigDataResource resource = candidate.getResource();
 			if (resource.isOptional()) {
 				this.optionalLocations.add(location);
 			}
+			// 如果资源已经被加载了，那就添加路径
+			// 因为是 set，所以不会重复
 			if (this.loaded.contains(resource)) {
 				this.loadedLocations.add(location);
 			}
 			else {
 				try {
+					// 调用对应的加载器进行配置文件的加载，说是加载，其实用解析这个词更合适一点
+					// 进过两三次调用后，最终进入的就是两种类型的资源加载器的 load 方法
+					// 下面就不贴代码了
 					ConfigData loaded = this.loaders.load(loaderContext, resource);
 					if (loaded != null) {
 						this.loaded.add(resource);

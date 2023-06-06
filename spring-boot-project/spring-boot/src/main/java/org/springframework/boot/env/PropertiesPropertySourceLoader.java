@@ -67,6 +67,7 @@ public class PropertiesPropertySourceLoader implements PropertySourceLoader {
 			result.add((Map) PropertiesLoaderUtils.loadProperties(resource));
 		}
 		else {
+			//不是以xml作为扩展名
 			List<Document> documents = new OriginTrackedPropertiesLoader(resource).load();
 			documents.forEach((document) -> result.add(document.asMap()));
 		}
